@@ -1,47 +1,39 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>401隨機座位</title>
 
     <style>
-        body {
-            font-family: Arial;
-            display: flex;
+        body { font-family: Arial; text-align: center; }
+        h1 { margin-bottom: 10px; }
+
+        .teacher-desk {
+            width: 200px; height: 40px; margin: 10px auto;
+            border: 2px solid black; line-height: 40px;
         }
 
-        /* 左邊座位區 */
-        .left {
-            width: 70%;
-            text-align: center;
-        }
+        .container { display: flex; justify-content: center; gap: 30px; }
 
-        /* 講桌 */
-        .teacher {
-            border: 2px solid black;
-            padding: 10px;
-            margin: 10px;
-            background-color: lightgray;
-        }
-
-        /* 座位格 */
-        .grid {
+        .seats {
             display: grid;
-            gap: 10px;
-            justify-content: center;
+            grid-template-columns: repeat(7, 60px);
+            grid-template-rows: repeat(4, 60px);
+            gap: 5px;
         }
 
         .seat {
             border: 1px solid black;
-            padding: 20px;
-            width: 80px;
-            height: 50px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; background-color: white;
         }
 
-        /* 右邊控制區 */
-        .right {
-            width: 30%;
-            padding: 10px;
+        .seat.empty { background-color: lightgray; }
+
+        .numbers {
+            width: 150px;
+            min-height: 200px;
         }
 
         textarea {
@@ -49,87 +41,103 @@
             height: 200px;
         }
 
-        input {
-            width: 50px;
-        }
+        button { margin-top: 10px; padding: 10px; cursor: pointer; }
     </style>
 </head>
-
 <body>
 
-<!-- 左邊 -->
-<div class="left">
-    <h1>401隨機座位</h1>
+<h1>401隨機座位</h1>
+<div class="teacher-desk">講桌</div>
 
-    <div class="teacher">講桌</div>
+<div class="container">
 
-    <div id="seats" class="grid"></div>
-</div>
+    <!-- 座位區 -->
+    <div class="seats" id="seats"></div>
 
-<!-- 右邊 -->
-<div class="right">
+    <!-- 右側 -->
+    <div>
+        <!-- 可編輯座號列 -->
+        <div class="numbers">
+            <textarea id="studentInput"></textarea>
+        </div>
 
-    <p>排數: <input type="number" id="rows" value="4"></p>
-    <p>列數: <input type="number" id="cols" value="5"></p>
+        <button onclick="shuffleSeats()">換座位</button>
+    </div>
 
-    <p>空位(用逗號隔開，例如: 3,7):</p>
-    <input type="text" id="empty">
-
-    <p>座號列表(可改):</p>
-    <textarea id="names">
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-    </textarea>
-
-    <button onclick="shuffleSeats()">排座位</button>
 </div>
 
 <script>
+const seatContainer = document.getElementById("seats");
+const input = document.getElementById("studentInput");
 
-function shuffleSeats() {
+let seatElements = [];
 
-    let rows = parseInt(document.getElementById("rows").value);
-    let cols = parseInt(document.getElementById("cols").value);
+/* 預設名單 (可改) */
+function defaultStudents() {
+    let list = [];
+    for (let i = 1; i <= 26; i++) {
+        if (i !== 25) list.push(i);
+    }
+    input.value = list.join("\n");
+}
 
-    let emptyInput = document.getElementById("empty").value;
-    let emptySeats = emptyInput ? emptyInput.split(",").map(Number) : [];
-
-    let names = document.getElementById("names").value
+/* 取得名單 */
+function getStudents() {
+    return input.value
         .split("\n")
-        .filter(n => n.trim() !== "");
+        .map(s => s.trim())
+        .filter(s => s !== "");
+}
 
-    // 隨機打亂
-    names.sort(() => Math.random() - 0.5);
+/* 建立座位 */
+function createSeats() {
+    for (let i = 0; i < 28; i++) {
+        const seat = document.createElement("div");
+        seat.classList.add("seat");
 
-    let seatsDiv = document.getElementById("seats");
-    seatsDiv.innerHTML = "";
-    seatsDiv.style.gridTemplateColumns = `repeat(${cols}, auto)`;
+        const row = Math.floor(i / 7);
+        const col = i % 7;
 
-    let index = 0;
-
-    for (let i = 1; i <= rows * cols; i++) {
-
-        let seat = document.createElement("div");
-        seat.className = "seat";
-
-        if (emptySeats.includes(i)) {
-            seat.innerText = "空位";
-        } else {
-            seat.innerText = names[index] || "";
-            index++;
+        if (col === 6 && row < 3) {
+            seat.classList.add("empty");
         }
 
-        seatsDiv.appendChild(seat);
+        seat.onclick = () => {
+            seat.classList.toggle("empty");
+        };
+
+        seatContainer.appendChild(seat);
+        seatElements.push(seat);
     }
 }
+
+/* 洗牌 */
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+/* 換座位 */
+function shuffleSeats() {
+    let students = getStudents();
+    shuffle(students);
+
+    let availableSeats = seatElements.filter(seat => !seat.classList.contains("empty"));
+
+    seatElements.forEach(seat => seat.textContent = "");
+
+    availableSeats.forEach((seat, index) => {
+        if (students[index]) {
+            seat.textContent = students[index];
+        }
+    });
+}
+
+/* 初始化 */
+defaultStudents();
+createSeats();
 
 </script>
 
